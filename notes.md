@@ -1,5 +1,15 @@
 # 미니3: 초등 수학 문제집 비교 도우미
 
+출처: 알라딘 초등학교참고서 주간 베스트 https://www.aladin.co.kr/shop/common/wbest.aspx?BestType=Bestseller&BranchType=1&CID=50246 · 2026-09-28 11:22 수집 · 부트캠프 비영리 과제
+
+## 다시 실행하는 순서
+
+1. 수집 스크립트(`01_collect_p1.py` · `02_collect.py`)는 다시 돌리지 않는다 — 원본 `data/raw.csv`(2026-09-28 11:22:38 수집)를 그대로 쓴다
+2. `python scripts/03_clean.py` → `data/clean.csv`
+3. `python scripts/04_stats.py` → `python scripts/05_hist.py` → `python scripts/06_by_category.py` (그림은 `charts/`)
+4. `python scripts/07_export_json.py` → `data/data.json`
+5. 더 해보기 스크립트(`03_check_pages.py` · `05_hist_half.py` · `06_by_category_median.py`)는 필요할 때만 실행한다
+
 ## M02 한 페이지 수집
 
 화면에서 센 항목 50개 = 수집 50행
@@ -113,7 +123,7 @@
 
 질문: 모은 수학 문제집(도서명에 「수학」이 들어간 책)의 세일즈포인트는 어느 구간에 몰려 있나?
 
-(그림 자리 — charts/hist.png)
+![hist](charts/hist.png)
 
 | 구간 (Sales Point) | 개수 |
 |---|---|
