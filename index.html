@@ -75,6 +75,28 @@
     .filters select, .filters button { flex: none; }
     .filters button { cursor: pointer; border-color: var(--accent); color: var(--accent); font-weight: 700; }
     #empty { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 16px; margin: 0; }
+    .recommend { margin: 0 0 16px; }
+    .recommend > button {
+      font: inherit; font-size: 0.9rem;
+      padding: 6px 12px;
+      border: 1px solid var(--accent); border-radius: 6px;
+      background: var(--accent); color: var(--bg); font-weight: 700;
+      cursor: pointer;
+    }
+    .recommend > button:disabled { opacity: 0.6; cursor: wait; }
+    #pick { margin-top: 10px; background: var(--card); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; }
+    #pick .pick-name { margin: 0 0 6px; font-weight: 700; }
+    #pick ul { margin: 0 0 8px; padding-left: 1.2em; }
+    #pick .pick-meta { margin: 0; font-size: 0.9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+    #pick .pick-meta a { color: var(--accent); }
+    #pick .pick-msg { margin: 0; }
+    .card.picked { border: 2px solid var(--accent); }
+    .badge {
+      align-self: flex-start;
+      font-size: 0.75rem; font-weight: 700;
+      padding: 1px 8px; border-radius: 999px;
+      background: var(--accent); color: var(--bg);
+    }
     .evidence { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
     .evidence h2 { margin: 0 0 16px; font-size: 1.2rem; }
     .evidence figure { max-width: 720px; margin: 0 auto 24px; }
@@ -100,6 +122,10 @@
         <select id="term"><option value="">전체</option></select>
       </label>
       <button type="button" id="apply">적용</button>
+    </div>
+    <div class="recommend">
+      <button type="button" id="ask">이 조건으로 추천받기</button>
+      <div id="pick" hidden aria-live="polite"></div>
     </div>
     <div class="sort">
       <button type="button" data-order="asc" aria-pressed="false">가격 낮은 순</button>
@@ -203,6 +229,25 @@
     }
     // ---- 조건 계산 끝 ----
 
+    // ---- 추천 확인 (DOM 과 무관) ----
+    const COLLECTED_AT = "수집 2026-09-28 11:22 (한국 시간)";
+    const MAX_CANDIDATES = 5;
+    // price 낮은 순, 같으면 data.json 순서 (api/recommend.mjs 와 같은 방식)
+    const candidatesFor = (items, budget, term) =>
+      [...match(items, budget, term)].sort((a, b) => a.price - b.price).slice(0, MAX_CANDIDATES);
+
+    // 답의 이름이 후보에 있고, 이유 속 숫자(쉼표 · "원" 을 뗀 값)가 모두 그 책의 price · sales_point 이면 그 책을 돌려준다
+    function checkPick(candidates, answer) {
+      const book = candidates.find((c) => c.name === answer?.name);
+      const reasons = answer?.reasons;
+      if (!book || !Array.isArray(reasons) || reasons.length !== 2 ||
+          !reasons.every((r) => typeof r === "string" && r.trim() !== "")) return null;
+      const allowed = new Set([book.price, book.sales_point]);
+      const numbers = reasons.join(" ").replace(/(\d),(?=\d)/g, "$1").replace(/원/g, "").match(/\d+/g) || [];
+      return numbers.every((n) => allowed.has(Number(n))) ? book : null;
+    }
+    // ---- 추천 확인 끝 ----
+
     fetch("data/data.json")
       .then((res) => {
         if (!res.ok) throw new Error("data/data.json 을 불러오지 못했습니다 (" + res.status + ")");
@@ -218,13 +263,40 @@
 
         termsIn(items.filter(isMath)).forEach((t) => termEl.add(new Option(t, t)));
 
+        const askBtn = document.getElementById("ask");
+        const pick = document.getElementById("pick");
+
         let shown = [];
-        const render = (arr) => list.replaceChildren(...arr.map(makeCard));
+        let applied = { budget: null, term: "" };   // 지금 걸려 있는 조건
+        let pickedName = null;                      // 추천된 책 (카드 표시용)
+        let askSeq = 0;                             // 조건이 바뀌면 늦게 온 답은 버린다
+
+        const render = (arr) => {
+          list.replaceChildren(...arr.map((item) => {
+            const li = makeCard(item);
+            if (item.name === pickedName) {
+              li.classList.add("picked");
+              const badge = document.createElement("span");
+              badge.className = "badge";
+              badge.textContent = "추천";
+              li.prepend(badge);
+            }
+            return li;
+          }));
+        };
         const setPressed = (btn) => sortBtns.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
         // 같은 가격끼리는 data.json 순서를 유지 (Array.sort 는 안정 정렬)
         const byPrice = (arr, dir) => [...arr].sort((a, b) => (a.price - b.price) * dir);
 
         function show(arr, budget, term) {
+          applied = { budget, term };
+          // 조건이 바뀌면 앞의 추천은 지운다
+          askSeq++;
+          pickedName = null;
+          pick.hidden = true;
+          pick.replaceChildren();
+          askBtn.disabled = false;
+          askBtn.textContent = "이 조건으로 추천받기";
           shown = arr;
           count.textContent = "조건에 맞는 " + arr.length + "개 / 전체 " + items.length + "개";
           render(arr);
@@ -252,6 +324,90 @@
             e.preventDefault();
             apply();
           }
+        });
+
+        function showMessage(text) {
+          const p = document.createElement("p");
+          p.className = "pick-msg";
+          p.textContent = text;
+          pick.replaceChildren(p);
+          pick.hidden = false;
+        }
+
+        function showPick(book, reasons) {
+          const name = document.createElement("p");
+          name.className = "pick-name";
+          name.textContent = "추천 : " + book.name;
+
+          const ul = document.createElement("ul");
+          reasons.forEach((r) => {
+            const li = document.createElement("li");
+            li.textContent = r;
+            ul.appendChild(li);
+          });
+
+          const meta = document.createElement("p");
+          meta.className = "pick-meta";
+          const link = document.createElement("a");
+          link.href = book.detail_url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "원래 화면 보기";
+          const when = document.createElement("span");
+          when.textContent = COLLECTED_AT;
+          meta.append(link, when);
+
+          pick.replaceChildren(name, ul, meta);
+          pick.hidden = false;
+        }
+
+        askBtn.addEventListener("click", async () => {
+          const { budget, term } = applied;
+          const candidates = candidatesFor(items, budget, term);
+          if (candidates.length === 0) {
+            showMessage(emptyMessage(items, budget, term));
+            return;
+          }
+
+          // 다시 누르면 앞의 추천은 지운다
+          if (pickedName !== null) {
+            pickedName = null;
+            render(shown);
+          }
+          pick.hidden = true;
+          pick.replaceChildren();
+
+          const seq = ++askSeq;
+          askBtn.disabled = true;
+          askBtn.textContent = "고르는 중…";
+          let answer = null;
+          try {
+            const res = await fetch("api/recommend", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ budget, term }),
+            });
+            const body = await res.json();
+            if (res.ok && !body.error) answer = body;
+          } catch {
+            answer = null;
+          }
+          if (seq !== askSeq) return;   // 기다리는 사이 조건이 바뀜
+          askBtn.disabled = false;
+          askBtn.textContent = "이 조건으로 추천받기";
+
+          if (!answer) {
+            showMessage("잠시 뒤 다시 눌러 주세요");
+            return;
+          }
+          const book = checkPick(candidates, answer);
+          if (!book) {
+            showMessage("추천을 확인하지 못했습니다");
+            return;
+          }
+          pickedName = book.name;
+          showPick(book, answer.reasons);
+          render(shown);
         });
 
         sortBtns.forEach((btn) => {

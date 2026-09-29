@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/recommend.mjs": {
+      "includeFiles": "data/data.json"
+    }
+  }
+}
