@@ -51,7 +51,9 @@
     .meta { color: var(--muted); font-size: 0.9rem; }
     .card a { margin-top: auto; padding-top: 8px; color: var(--accent); font-size: 0.9rem; }
     #error { color: #c0392b; }
-    .sort { display: flex; gap: 8px; margin: 0 0 16px; }
+    /* 한 줄: 왼쪽 묶음(조건 칸 · 적용 · 추천받기) / 오른쪽 묶음(가격 정렬). 넘치면 묶음 단위로 줄이 바뀐다 */
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin: 0 0 16px; }
+    .sort { display: flex; gap: 8px; margin: 0; flex: none; margin-left: auto; }
     .sort button {
       font: inherit; font-size: 0.9rem;
       padding: 6px 12px;
@@ -61,7 +63,10 @@
     }
     .sort button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 700; }
     /* 한 줄 고정: 좁은 화면에서는 예산 칸이 줄어든다 */
-    .filters { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; }
+    .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; min-width: 0; }
+    /* 한 줄에 다 안 들어가는 좁은 화면에서만 [적용] · [추천받기] 가 한 덩어리로 아래 줄에 간다 */
+    .filters .fields { display: flex; align-items: center; gap: 12px; flex: 0 1 auto; min-width: 0; }
+    .filters .actions { display: flex; align-items: center; gap: 12px; flex: none; }
     .filters label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); white-space: nowrap; min-width: 0; }
     .filters label { flex: none; }
     .filters label:first-child { flex: 0 1 auto; }
@@ -75,16 +80,15 @@
     .filters select, .filters button { flex: none; }
     .filters button { cursor: pointer; border-color: var(--accent); color: var(--accent); font-weight: 700; }
     #empty { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 16px; margin: 0; }
-    .recommend { margin: 0 0 16px; }
-    .recommend > button {
+    #ask {
       font: inherit; font-size: 0.9rem;
       padding: 6px 12px;
       border: 1px solid var(--accent); border-radius: 6px;
       background: var(--accent); color: var(--bg); font-weight: 700;
       cursor: pointer;
     }
-    .recommend > button:disabled { opacity: 0.6; cursor: wait; }
-    #pick { margin-top: 10px; background: var(--card); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; }
+    #ask:disabled { opacity: 0.6; cursor: wait; }
+    #pick { margin: 0 0 16px; background: var(--card); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; }
     #pick .pick-name { margin: 0 0 6px; font-weight: 700; }
     #pick ul { margin: 0 0 8px; padding-left: 1.2em; }
     #pick .pick-meta { margin: 0; font-size: 0.9rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
@@ -99,7 +103,9 @@
     }
     .evidence { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
     .evidence h2 { margin: 0 0 16px; font-size: 1.2rem; }
-    .evidence figure { max-width: 720px; margin: 0 auto 24px; }
+    /* 넓은 화면은 그림 두 장을 나란히, 좁으면 위아래로 */
+    .evidence .figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 24px; margin: 0 0 24px; }
+    .evidence figure { margin: 0; }
     .evidence img {
       display: block; max-width: 100%; height: auto;
       background: #fff; border: 1px solid var(--line); border-radius: 8px;
@@ -114,28 +120,33 @@
     <h1>초등 수학 문제집 비교 도우미</h1>
     <p id="count">불러오는 중…</p>
     <p id="error" hidden></p>
+    <div class="toolbar">
     <div class="filters">
+      <span class="fields">
       <label>예산(원)
         <input id="budget" type="number" min="0" step="100" inputmode="numeric" placeholder="비우면 제한 없음">
       </label>
       <label>학년-학기
         <select id="term"><option value="">전체</option></select>
       </label>
-      <button type="button" id="apply">적용</button>
-    </div>
-    <div class="recommend">
-      <button type="button" id="ask">이 조건으로 추천받기</button>
-      <div id="pick" hidden aria-live="polite"></div>
+      </span>
+      <span class="actions">
+        <button type="button" id="apply">적용</button>
+        <button type="button" id="ask">이 조건으로 추천받기</button>
+      </span>
     </div>
     <div class="sort">
       <button type="button" data-order="asc" aria-pressed="false">가격 낮은 순</button>
       <button type="button" data-order="desc" aria-pressed="false">가격 높은 순</button>
     </div>
+    </div>
+    <div id="pick" hidden aria-live="polite"></div>
     <ul id="list"></ul>
     <p id="empty" hidden></p>
 
     <section class="evidence">
       <h2>근거</h2>
+      <div class="figs">
       <figure>
         <img src="charts/hist.png" width="1350" height="825" alt="그림 1 (charts/hist.png)">
         <figcaption>그림 1 : 이름에 「수학」이 든 31권을 세일즈포인트 5,000 간격 8구간으로 나누면, 0 이상 5,000 미만과 10,000 이상 15,000 미만이 각각 7권으로 가장 많다</figcaption>
@@ -144,6 +155,7 @@
         <img src="charts/by_category.png" width="1500" height="900" alt="그림 2 (charts/by_category.png)">
         <figcaption>그림 2 : 출판사별 평균 판매가는 에듀왕이 12,150.00원(n = 2)으로 가장 낮고, 비상교육과 씨투엠에듀가 15,300.00원(각 n = 1)으로 가장 높다</figcaption>
       </figure>
+      </div>
       <p class="limit">한계 : 2026-09-28 알라딘 초등학교참고서 주간 베스트 1페이지 50권 중 이름에 「수학」이 든 31권만 본 결과라, 다른 수학 문제집 · 다른 주의 순위 · 이름에 「수학」이 없는 수학책(예: 기적의 계산법 5학년 세트)은 들어 있지 않다</p>
       <p class="source">출처 : 알라딘 초등학교참고서 주간 베스트 1페이지 · 2026-09-28 11:22 수집(한국 시간) · 50개 · 비영리 과제</p>
     </section>
