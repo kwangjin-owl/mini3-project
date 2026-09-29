@@ -377,7 +377,7 @@
           const { budget, term } = applied;
           const candidates = candidatesFor(items, budget, term);
           if (candidates.length === 0) {
-            showMessage(emptyMessage(items, budget, term));
+            showMessage("후보가 0개라 추천하지 않았습니다.");
             return;
           }
 
