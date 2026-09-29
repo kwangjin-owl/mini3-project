@@ -4,8 +4,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-// 모델 이름과 부르는 방법: https://ai.google.dev/gemini-api/docs/text-generation (Interactions API)
-const MODEL = "gemini-3.8-flash";
+// 모델 이름: https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite
+// 부르는 방법: https://ai.google.dev/gemini-api/docs/text-generation (Interactions API)
+const MODEL = "gemini-3.5-flash-lite";
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 const API_REVISION = "2026-05-20";
 const MAX_CANDIDATES = 5;
@@ -19,6 +20,7 @@ const SYSTEM_INSTRUCTION = [
   "4. 다른 후보와 견줄 때는 숫자 없이 말로만 한다.",
   "5. 후보 표에 없는 책이나 표에 없는 정보(난이도 · 후기 · 저자 · 학습 효과 등)는 말하지 않는다.",
   "6. sales_point 는 \"세일즈포인트\" 라고만 부른다. \"인기\" 나 \"판매량\" 같은 말로 바꿔 말하지 않는다.",
+  "7. reasons 의 각 줄은 띄어쓰기를 포함해 40자 안쪽으로 쓴다.",
 ].join("\n");
 
 // ---- 조건 계산 (index.html 과 같은 방식) ----
