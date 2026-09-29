@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>초등 수학 문제집 비교 도우미</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #59636e;
+      --line: #d9dee3;
+      --accent: #0b63ce;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181c;
+        --card: #1f2227;
+        --text: #e6e8eb;
+        --muted: #a0a7b0;
+        --line: #33373d;
+        --accent: #6aa9ff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    #count { margin: 0 0 20px; color: var(--muted); }
+    #list {
+      list-style: none; margin: 0; padding: 0;
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 1rem; line-height: 1.4; }
+    .price { font-weight: 700; font-size: 1.1rem; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    .card a { margin-top: auto; padding-top: 8px; color: var(--accent); font-size: 0.9rem; }
+    #error { color: #c0392b; }
+    .sort { display: flex; gap: 8px; margin: 0 0 16px; }
+    .sort button {
+      font: inherit; font-size: 0.9rem;
+      padding: 6px 12px;
+      border: 1px solid var(--line); border-radius: 6px;
+      background: var(--card); color: var(--text);
+      cursor: pointer;
+    }
+    .sort button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    /* 한 줄 고정: 좁은 화면에서는 예산 칸이 줄어든다 */
+    .filters { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; }
+    .filters label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--muted); white-space: nowrap; min-width: 0; }
+    .filters label { flex: none; }
+    .filters label:first-child { flex: 0 1 auto; }
+    .filters input, .filters select, .filters button {
+      font: inherit; font-size: 0.9rem;
+      padding: 6px 10px;
+      border: 1px solid var(--line); border-radius: 6px;
+      background: var(--card); color: var(--text);
+    }
+    .filters input { flex: 0 1 10.5em; width: 10.5em; min-width: 4.5em; }
+    .filters select, .filters button { flex: none; }
+    .filters button { cursor: pointer; border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    #empty { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 16px; margin: 0; }
+    .evidence { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line); }
+    .evidence h2 { margin: 0 0 16px; font-size: 1.2rem; }
+    .evidence figure { margin: 0 0 24px; }
+    .evidence img {
+      display: block; max-width: 100%; height: auto;
+      background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    }
+    .evidence figcaption { margin-top: 8px; }
+    .evidence .limit { margin: 0 0 12px; }
+    .evidence .source { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>초등 수학 문제집 비교 도우미</h1>
+    <p id="count">불러오는 중…</p>
+    <p id="error" hidden></p>
+    <div class="filters">
+      <label>예산(원)
+        <input id="budget" type="number" min="0" step="100" inputmode="numeric" placeholder="비우면 제한 없음">
+      </label>
+      <label>학년-학기
+        <select id="term"><option value="">전체</option></select>
+      </label>
+      <button type="button" id="apply">적용</button>
+    </div>
+    <div class="sort">
+      <button type="button" data-order="asc" aria-pressed="false">가격 낮은 순</button>
+      <button type="button" data-order="desc" aria-pressed="false">가격 높은 순</button>
+    </div>
+    <ul id="list"></ul>
+    <p id="empty" hidden></p>
+
+    <section class="evidence">
+      <h2>근거</h2>
+      <figure>
+        <img src="charts/hist.png" width="1350" height="825" alt="그림 1 (charts/hist.png)">
+        <figcaption>그림 1 : 이름에 「수학」이 든 31권을 세일즈포인트 5,000 간격 8구간으로 나누면, 0 이상 5,000 미만과 10,000 이상 15,000 미만이 각각 7권으로 가장 많다</figcaption>
+      </figure>
+      <figure>
+        <img src="charts/by_category.png" width="1500" height="900" alt="그림 2 (charts/by_category.png)">
+        <figcaption>그림 2 : 출판사별 평균 판매가는 에듀왕이 12,150.00원(n = 2)으로 가장 낮고, 비상교육과 씨투엠에듀가 15,300.00원(각 n = 1)으로 가장 높다</figcaption>
+      </figure>
+      <p class="limit">한계 : 2026-09-28 알라딘 초등학교참고서 주간 베스트 1페이지 50권 중 이름에 「수학」이 든 31권만 본 결과라, 다른 수학 문제집 · 다른 주의 순위 · 이름에 「수학」이 없는 수학책(예: 기적의 계산법 5학년 세트)은 들어 있지 않다</p>
+      <p class="source">출처 : 알라딘 초등학교참고서 주간 베스트 1페이지 · 2026-09-28 11:22 수집(한국 시간) · 50개 · 비영리 과제</p>
+    </section>
+  </main>
+
+  <script>
+    const fmt = (n) => Number(n).toLocaleString("ko-KR");
+
+    function makeCard(item) {
+      const li = document.createElement("li");
+      li.className = "card";
+
+      const name = document.createElement("h2");
+      name.textContent = item.name;
+
+      const price = document.createElement("div");
+      price.className = "price";
+      price.textContent = fmt(item.price) + "원";
+
+      const sales = document.createElement("div");
+      sales.className = "meta";
+      sales.textContent = "세일즈포인트 " + fmt(item.sales_point);
+
+      const pub = document.createElement("div");
+      pub.className = "meta";
+      pub.textContent = "출판사 " + item.publisher;
+
+      const link = document.createElement("a");
+      link.href = item.detail_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "원래 화면 보기";
+
+      li.append(name, price, sales, pub, link);
+      return li;
+    }
+
+    // ---- 조건 계산 (DOM 과 무관) ----
+    const TERM_RE = /(?<!\d)\d+-\d+(?!\d)/g;
+    // t 는 "5-2" 처럼 숫자와 - 만 있는 값 (고르는 목록에서만 옴)
+    const termRe = (t) => new RegExp("(?<![0-9])" + t + "(?![0-9])");
+    const isMath = (item) => item.name.includes("수학");
+
+    // name 에 실제로 나오는 학년-학기 값 (앞뒤에 다른 숫자가 없는 것)
+    function termsIn(items) {
+      const set = new Set();
+      items.forEach((item) => (item.name.match(TERM_RE) || []).forEach((t) => set.add(t)));
+      return [...set].sort((a, b) => {
+        const [ag, as] = a.split("-").map(Number), [bg, bs] = b.split("-").map(Number);
+        return ag - bg || as - bs;
+      });
+    }
+
+    // budget: 숫자 또는 null(제한 없음), term: 문자열 또는 ""(제한 없음)
+    function match(items, budget, term) {
+      const re = term ? termRe(term) : null;
+      return items.filter((item) =>
+        isMath(item) &&
+        (budget === null || item.price <= budget) &&
+        (!re || re.test(item.name)));
+    }
+
+    // 5-2 ↔ 5-1
+    function otherTerm(term) {
+      const [g, s] = term.split("-");
+      if (s === "1") return g + "-2";
+      if (s === "2") return g + "-1";
+      return null;
+    }
+
+    function emptyMessage(items, budget, term) {
+      const noBudget = match(items, null, term);
+      const cheapest = noBudget.length ? Math.min(...noBudget.map((x) => x.price)) : null;
+      const other = term ? otherTerm(term) : null;
+      // 학기 문장이 뒤에 붙으면 앞 문장을 "~고," 로 잇는다
+      const first = cheapest === null
+        ? "예산을 올려도 후보가 " + (other ? "없고" : "없습니다")
+        : "예산만 올리면 가장 싼 후보는 " + fmt(cheapest) + (other ? "원이고" : "원입니다");
+      const second = other
+        ? ", 예산은 그대로 두고 " + other + "로 바꾸면 " + match(items, budget, other).length + "개입니다"
+        : "";
+      return "조건에 맞는 수학 문제집이 없습니다. " + first + second + ".";
+    }
+    // ---- 조건 계산 끝 ----
+
+    fetch("data/data.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("data/data.json 을 불러오지 못했습니다 (" + res.status + ")");
+        return res.json();
+      })
+      .then((items) => {
+        const list = document.getElementById("list");
+        const empty = document.getElementById("empty");
+        const count = document.getElementById("count");
+        const budgetEl = document.getElementById("budget");
+        const termEl = document.getElementById("term");
+        const sortBtns = document.querySelectorAll(".sort button");
+
+        termsIn(items.filter(isMath)).forEach((t) => termEl.add(new Option(t, t)));
+
+        let shown = [];
+        const render = (arr) => list.replaceChildren(...arr.map(makeCard));
+        const setPressed = (btn) => sortBtns.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        // 같은 가격끼리는 data.json 순서를 유지 (Array.sort 는 안정 정렬)
+        const byPrice = (arr, dir) => [...arr].sort((a, b) => (a.price - b.price) * dir);
+
+        function show(arr, budget, term) {
+          shown = arr;
+          count.textContent = "조건에 맞는 " + arr.length + "개 / 전체 " + items.length + "개";
+          render(arr);
+          empty.hidden = arr.length > 0;
+          empty.textContent = arr.length ? "" : emptyMessage(items, budget, term);
+        }
+
+        // 처음: "수학" 조건만, data.json 순서
+        show(match(items, null, ""), null, "");
+
+        // 칸의 값이 바뀌면 바로 조건을 건다. [적용] 과 예산 칸의 엔터도 같은 일을 한다
+        function apply() {
+          const raw = budgetEl.value.trim();
+          const budget = raw === "" ? null : Number(raw);
+          const term = termEl.value;
+          show(byPrice(match(items, budget, term), 1), budget, term);
+          setPressed(sortBtns[0]);
+        }
+
+        document.getElementById("apply").addEventListener("click", apply);
+        budgetEl.addEventListener("input", apply);
+        termEl.addEventListener("change", apply);
+        budgetEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.isComposing) {
+            e.preventDefault();
+            apply();
+          }
+        });
+
+        sortBtns.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            render(shown = byPrice(shown, btn.dataset.order === "asc" ? 1 : -1));
+            setPressed(btn);
+          });
+        });
+      })
+      .catch((err) => {
+        document.getElementById("count").textContent = "";
+        const el = document.getElementById("error");
+        el.textContent = err.message;
+        el.hidden = false;
+      });
+  </script>
+</body>
+</html>
