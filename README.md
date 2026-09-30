@@ -54,3 +54,31 @@ https://math-pick.vercel.app
 - Gemini 무료 한도(하루 요청 수)를 넘으면 추천이 잠시 안 됩니다.
 - 추천 이유가 숫자 두 줄이라 「왜 그 책인지」는 잘 드러나지 않습니다.
 - 예산 칸에 숫자가 아닌 글자를 넣으면 빈칸처럼 읽힙니다.
+
+## 실행 안내
+
+명령은 모두 `mini3-project` 폴더에서 실행합니다. 윈도우는 `python`, 맥은 `python3` 로 씁니다.
+
+### 1. 다시 모으기
+
+| 순서 | 파일 | 만드는 것 | 명령 | 확인 |
+|---|---|---|---|---|
+| 0 | `scripts/00_env_check.py` | 파일 없음 (가짜 도서명 3개 표를 출력해 환경만 확인) | `python scripts/00_env_check.py` | 확인 안 함 |
+| 1 | `scripts/01_collect_p1.py` | `data/raw_p1.csv` (목록 1페이지) — 사이트에 요청을 보낸다 · 페이지 수를 늘리지 않는다 · 주간 순위라 다시 돌리면 다른 50행이 된다 | `python scripts/01_collect_p1.py` | 확인 안 함 |
+| 2 | `scripts/02_collect.py` | `data/raw.csv` — 사이트에 요청을 보낸다 · 페이지 수를 늘리지 않는다 · 주간 순위라 다시 돌리면 다른 50행이 된다 | `python scripts/02_collect.py` | 확인 안 함 |
+| 3 | `scripts/03_check_pages.py` (필요할 때만) | 파일 없음 (`data/raw.csv` 를 페이지별 행 수로 출력) | `python scripts/03_check_pages.py` | 확인 안 함 |
+| 3 | `scripts/03_clean.py` | `data/clean.csv` (`data/raw.csv` 는 읽기만 함) | `python scripts/03_clean.py` | 확인함 — 오류 없이 끝남 · 정제 50행 (전 50 → 후 50) |
+| 4 | `scripts/04_stats.py` | 파일 없음 (`data/clean.csv` 의 기초 통계를 출력) | `python scripts/04_stats.py` | 확인 안 함 |
+| 5 | `scripts/05_hist.py` | `charts/hist.png` | `python scripts/05_hist.py` | 확인 안 함 |
+| 5 | `scripts/05_hist_half.py` (필요할 때만) | `charts/hist_half.png` | `python scripts/05_hist_half.py` | 확인 안 함 |
+| 6 | `scripts/06_by_category.py` | `charts/by_category.png` | `python scripts/06_by_category.py` | 확인 안 함 |
+| 6 | `scripts/06_by_category_median.py` (필요할 때만) | `charts/by_category_median.png` | `python scripts/06_by_category_median.py` | 확인 안 함 |
+| 7 | `scripts/07_export_json.py` | `data/data.json` (`data/clean.csv` 는 읽기만 함) | `python scripts/07_export_json.py` | 확인 안 함 |
+
+### 2. 화면에 반영하기
+
+화면(`index.html`)은 `data/data.json` 과 `charts/hist.png` · `charts/by_category.png` 를 읽고, 추천(`api/recommend.mjs`)도 후보를 `data/data.json` 에서 다시 고릅니다. 새로 만든 `data/data.json` 과 `charts` 를 커밋 · 푸시하면 Vercel 이 다시 배포합니다. (확인 안 함)
+
+### 3. AI 연결
+
+Vercel 환경변수 이름 `GEMINI_API_KEY` 에 열쇠를 넣고 Redeploy 합니다. 열쇠가 없으면 서버가 `ai_unavailable` 을 돌려주고, 화면에는 「잠시 뒤 다시 눌러 주세요」가 뜹니다. (확인 안 함)
