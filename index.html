@@ -114,8 +114,23 @@
     .evidence .limit { margin: 0 0 12px; }
     .evidence .source { margin: 0; color: var(--muted); font-size: 0.9rem; }
   </style>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KK3DL5B2');</script>
+<!-- End Google Tag Manager -->
+
 </head>
 <body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KK3DL5B2"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
   <main>
     <h1>초등 수학 문제집 비교 도우미</h1>
     <p id="count">불러오는 중…</p>
@@ -163,6 +178,11 @@
 
   <script>
     const fmt = (n) => Number(n).toLocaleString("ko-KR");
+
+    // ---- 측정 (dataLayer) ----
+    window.dataLayer = window.dataLayer || [];
+    // 예산은 숫자로 바꾼 값만, 빈칸이면 "none" (예산 칸에 친 글자 그대로는 보내지 않는다)
+    const budgetParam = (budget) => (budget === null ? "none" : budget);
 
     function makeCard(item) {
       const li = document.createElement("li");
@@ -328,13 +348,46 @@
           setPressed(sortBtns[0]);
         }
 
-        document.getElementById("apply").addEventListener("click", apply);
-        budgetEl.addEventListener("input", apply);
-        termEl.addEventListener("change", apply);
+        // filter_book_list : 값이 바뀐 뒤 1초 동안 더 안 바뀌면 한 번, [적용] · 엔터면 바로 한 번.
+        // 바로 앞과 같은 조건이면 보내지 않는다 (처음 화면의 조건도 "바로 앞" 으로 본다)
+        let lastFilter = JSON.stringify(applied);
+        let filterTimer = null;
+        function trackFilter(trigger) {
+          clearTimeout(filterTimer);
+          filterTimer = null;
+          const key = JSON.stringify(applied);
+          if (key === lastFilter) return;
+          lastFilter = key;
+          window.dataLayer.push({
+            event: "filter_book_list",
+            budget: budgetParam(applied.budget),
+            term: applied.term,
+            result_count: shown.length,
+            trigger,
+          });
+        }
+        const trackFilterLater = () => {
+          clearTimeout(filterTimer);
+          filterTimer = setTimeout(() => trackFilter("idle_1s"), 1000);
+        };
+
+        document.getElementById("apply").addEventListener("click", () => {
+          apply();
+          trackFilter("apply_click");
+        });
+        budgetEl.addEventListener("input", () => {
+          apply();
+          trackFilterLater();
+        });
+        termEl.addEventListener("change", () => {
+          apply();
+          trackFilterLater();
+        });
         budgetEl.addEventListener("keydown", (e) => {
           if (e.key === "Enter" && !e.isComposing) {
             e.preventDefault();
             apply();
+            trackFilter("enter_key");
           }
         });
 
@@ -373,11 +426,25 @@
           pick.hidden = false;
         }
 
+        // get_book_recommendation : 결과 칸에 결과가 뜬 순간 한 번 (추천 이유 문장은 보내지 않는다)
+        function trackRecommendation(budget, term, candidateCount, status, book) {
+          const ev = {
+            event: "get_book_recommendation",
+            budget: budgetParam(budget),
+            term,
+            candidate_count: candidateCount,
+            result_status: status,
+          };
+          if (status === "success") ev.item_name = book.name;
+          window.dataLayer.push(ev);
+        }
+
         askBtn.addEventListener("click", async () => {
           const { budget, term } = applied;
           const candidates = candidatesFor(items, budget, term);
           if (candidates.length === 0) {
             showMessage("후보가 0개라 추천하지 않았습니다.");
+            trackRecommendation(budget, term, 0, "no_candidates");
             return;
           }
 
@@ -410,16 +477,42 @@
 
           if (!answer) {
             showMessage("잠시 뒤 다시 눌러 주세요");
+            trackRecommendation(budget, term, candidates.length, "retry_later");
             return;
           }
           const book = checkPick(candidates, answer);
           if (!book) {
             showMessage("추천을 확인하지 못했습니다");
+            trackRecommendation(budget, term, candidates.length, "unverified");
             return;
           }
           pickedName = book.name;
           showPick(book, answer.reasons);
           render(shown);
+          trackRecommendation(budget, term, candidates.length, "success", book);
+        });
+
+        // select_item : 「원래 화면 보기」 누름을 목록 · 추천 칸에서 하나씩만 받는다 (카드를 다시 그려도 겹치지 않음)
+        function trackSelect(listName, book) {
+          window.dataLayer.push({ ecommerce: null });
+          window.dataLayer.push({
+            event: "select_item",
+            ecommerce: {
+              item_list_name: listName,
+              items: [{ item_name: book.name, price: book.price, item_brand: book.publisher }],
+            },
+          });
+        }
+        list.addEventListener("click", (e) => {
+          if (!e.target.closest("a")) return;
+          const li = e.target.closest("li.card");
+          const book = shown[[...list.children].indexOf(li)];
+          if (book) trackSelect("book_list", book);
+        });
+        pick.addEventListener("click", (e) => {
+          if (!e.target.closest("a")) return;
+          const book = shown.find((x) => x.name === pickedName);
+          if (book) trackSelect("recommendation", book);
         });
 
         sortBtns.forEach((btn) => {
