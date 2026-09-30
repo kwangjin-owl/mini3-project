@@ -183,6 +183,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     window.dataLayer = window.dataLayer || [];
     // 예산은 숫자로 바꾼 값만, 빈칸이면 "none" (예산 칸에 친 글자 그대로는 보내지 않는다)
     const budgetParam = (budget) => (budget === null ? "none" : budget);
+    // 학년-학기 「전체」(빈 값) 는 "all"
+    const termParam = (term) => (term === "" ? "all" : term);
 
     function makeCard(item) {
       const li = document.createElement("li");
@@ -361,7 +363,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           window.dataLayer.push({
             event: "filter_book_list",
             budget: budgetParam(applied.budget),
-            term: applied.term,
+            term: termParam(applied.term),
             result_count: shown.length,
             trigger,
           });
@@ -431,11 +433,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           const ev = {
             event: "get_book_recommendation",
             budget: budgetParam(budget),
-            term,
+            term: termParam(term),
             candidate_count: candidateCount,
             result_status: status,
+            // 성공이 아니면 undefined 를 넣어, 태그 관리자가 앞 추천의 item_name 을 들고 있지 않게 한다
+            item_name: status === "success" ? book.name : undefined,
           };
-          if (status === "success") ev.item_name = book.name;
           window.dataLayer.push(ev);
         }
 
