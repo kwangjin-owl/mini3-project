@@ -51,6 +51,9 @@
     .meta { color: var(--muted); font-size: 0.9rem; }
     .card a { margin-top: auto; padding-top: 8px; color: var(--accent); font-size: 0.9rem; }
     #error { color: #c0392b; }
+    .budget-note { font-size: 0.85rem; color: #c0392b; }
+    /* 안내가 보일 때만, 좁은 화면에서 안내가 칸에 겹치지 않고 다음 줄로 넘어가게 한다 */
+    .filters .fields:has(.budget-note:not([hidden])) { flex-wrap: wrap; }
     /* 한 줄: 왼쪽 묶음(조건 칸 · 적용 · 추천받기) / 오른쪽 묶음(가격 정렬). 넘치면 묶음 단위로 줄이 바뀐다 */
     .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin: 0 0 16px; }
     .sort { display: flex; gap: 8px; margin: 0; flex: none; margin-left: auto; }
@@ -141,6 +144,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <label>예산(원)
         <input id="budget" type="number" min="0" step="100" inputmode="numeric" placeholder="비우면 제한 없음">
       </label>
+      <span id="budget-note" class="budget-note" role="status" hidden>예산에 숫자가 아닌 글자가 있어 예산 없이 보여 줍니다</span>
       <label>학년-학기
         <select id="term"><option value="">전체</option></select>
       </label>
@@ -401,6 +405,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             trackFilter("enter_key");
           }
         });
+
+        // 칸은 비어 있지 않은데 숫자로 읽히지 않으면(badInput) 칸 옆에 알린다. 조건은 지금처럼 예산 없이 건다
+        const budgetNote = document.getElementById("budget-note");
+        const updateBudgetNote = () => { budgetNote.hidden = !budgetEl.validity.badInput; };
+        budgetEl.addEventListener("input", updateBudgetNote);
+        document.getElementById("apply").addEventListener("click", updateBudgetNote);
 
         function showMessage(text) {
           const p = document.createElement("p");
