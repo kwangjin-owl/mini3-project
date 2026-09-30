@@ -266,7 +266,9 @@ M15 에서 흐려지는 것 - 글자 하나마다 조건이 걸려, 16200 을 �
 | 이벤트 | 미리보기 | DebugView | 누른 횟수 | 도착 횟수 |
 |---|---|---|---|---|
 | select_item | 실행된 태그 수 칸 | 도착 · item_list_name : recommendation | 4 | 4 |
-| filter_book_list | 쪽지만 들어옴 | 태그 없음 | - | - |
-| get_book_recommendation | 쪽지만 들어옴 | 태그 없음 | - | - |
+| filter_book_list | 실행된 태그 수 칸 (5회) | 도착 · 마지막 줄 term : all · budget : none | 5 (미리보기 실행 수 · 1초 멈춤 포함) | 5 |
+| get_book_recommendation | 실행된 태그 수 칸 (2회) | 도착 · 후보 0개 줄 result_status : no_candidates · item_name 없음 | 2 | 2 |
 
 게시한 버전 : 미니3 select_item 추가 (버전 9)
+더 해보기 게시 버전 : 미니3 조건 적용 · 추천 결과 이벤트 추가 (버전 10) · 데이터 영역 변수 7개 · 트리거 2개 · 태그 2개
+더 해보기 코드 고침 : 성공이 아닌 추천 결과에는 item_name 을 비우고, 학년-학기 전체는 term : all 로 보냄 (커밋 1595688)
